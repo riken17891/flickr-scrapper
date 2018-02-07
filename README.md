@@ -8,7 +8,7 @@
 3. selenium==3.8.1
 4. tornado==4.5.2
 5. beautifulsoup4==4.6.0
-6. chromedriver==2.35
+6. chromedriver==2.32 (2.35 doesn't work well for Headless Purposes - If want to use 2.35 then just comment out the headless option in selenium_api.py)
 
 
 ## 1. selenium_api.py
