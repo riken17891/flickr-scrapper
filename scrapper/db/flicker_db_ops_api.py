@@ -41,7 +41,7 @@ class FlickrGeoInsertHandler(tornado.web.RequestHandler):
 
         loop.create_task(model_tuple_consumer(queue=geo_model_queue, sqlite=self.sqlite))
         loop.create_task(model_tuple_producer(queue=geo_model_queue, model=geo_model,
-                                              keys_to_keep=["id", "latitude", "longitude"]))
+                                              keys_to_keep=DB_API["geo_fields"]))
 
         yield geo_model_queue.join()
 
