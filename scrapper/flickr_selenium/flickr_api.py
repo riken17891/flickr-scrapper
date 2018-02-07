@@ -30,13 +30,15 @@ class SearchHandler(tornado.web.RequestHandler):
 
     @gen.coroutine
     def get(self, city):
-        image_links_queue = asyncio.Queue(loop=loop, maxsize=25)
-        geo_model_queue = asyncio.Queue(loop=loop, maxsize=25)
+        image_links_queue = asyncio.Queue(loop=loop)
+        geo_model_queue = asyncio.Queue(loop=loop)
 
-        loop.create_task(self.geo_model_consumer(city=city, geo_model_queue=geo_model_queue))
-        loop.create_task(self.geo_model_producer(city=city, image_links_queue=image_links_queue,
-                                                 geo_model_queue=geo_model_queue))
-        loop.create_task(self.image_link_producer(city=city, image_links_queue=image_links_queue))
+        task1 = loop.create_task(self.geo_model_consumer(city=city, geo_model_queue=geo_model_queue))
+        task2 = loop.create_task(self.geo_model_producer(city=city, image_links_queue=image_links_queue,
+                                                         geo_model_queue=geo_model_queue))
+        task3 = loop.create_task(self.image_link_producer(city=city, image_links_queue=image_links_queue))
+
+        asyncio.gather(task1, task2, task3)
 
         yield image_links_queue.join()
         yield geo_model_queue.join()
@@ -53,9 +55,9 @@ class SearchHandler(tornado.web.RequestHandler):
             while True:
                 link = yield from image_links_queue.get()
 
-                print("Reading : " + city + " " + link)
+                print("Reading : ", city, link)
 
-                asyncio.ensure_future(self.bound_read_one(url=link, session=session, result_queue=geo_model_queue))
+                yield from self.bound_read_one(url=link, session=session, result_queue=geo_model_queue)
 
                 image_links_queue.task_done()
 
@@ -66,25 +68,35 @@ class SearchHandler(tornado.web.RequestHandler):
             while True:
                 model = yield from geo_model_queue.get()
 
-                print("Posting : " + city + " " + json.dumps(model) + " ")
+                print("Posting : ", city, json.dumps(model))
 
                 if model is not None and model:
-                    asyncio.ensure_future(self.post_one(url=url, session=session,
-                                                        data=json.dumps([model[0]], sort_keys=True)))
+                    yield from self.post_one(url=url, session=session,
+                                             data=json.dumps([model[0]], sort_keys=True))
 
                 geo_model_queue.task_done()
 
     @staticmethod
     async def post_one(url, session, data):
         async with session.post(url, data=data) as response:
-            print("Finished Posting : " + data + " " + str(response.status))
+            print("Finished Posting :", data, str(response.status))
 
     @staticmethod
     async def read_one(url, session, result_queue):
-        async with session.get(url=url) as response:
-            page_content = await response.read()
-            print("Finished Reading : " + url)
-            await result_queue.put(FlickrImagePage(page_content).get_geo_model())
+        try:
+            async with session.get(url=url) as response:
+                if response.status == 200:
+                    page_content = await response.read()
+                    print("Finished Reading : " + url)
+                    await result_queue.put(FlickrImagePage(page_content).get_geo_model())
+        except (aiohttp.ClientResponseError, aiohttp.ClientConnectionError,
+                aiohttp.ClientConnectorCertificateError,
+                aiohttp.ServerDisconnectedError,
+                aiohttp.ClientSSLError,
+                aiohttp.ClientResponseError,
+                asyncio.TimeoutError,
+                TimeoutError) as e:
+            print("Error Reading : ", url, e)
 
     async def bound_read_one(self, url, session, result_queue):
         async with semaphore:
@@ -100,7 +112,7 @@ def flickr_search_app():
 if __name__ == "__main__":
     AsyncIOMainLoop().install()
     loop = asyncio.get_event_loop()
-    semaphore = asyncio.Semaphore(1000)
+    semaphore = asyncio.Semaphore(100)
 
     app = flickr_search_app()
     app.listen(FLICKR_API["port"])

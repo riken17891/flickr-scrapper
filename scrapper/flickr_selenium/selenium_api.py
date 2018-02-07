@@ -1,5 +1,6 @@
 import re
 import json
+import time
 
 import asyncio
 
@@ -16,7 +17,7 @@ class FlickrSearch:
 
     def __init__(self, place):
         options = webdriver.ChromeOptions()
-        #options.add_argument('headless')
+        options.add_argument('headless')
 
         self.place = place
         self.browser = webdriver.Chrome(chrome_options=options)
@@ -43,8 +44,9 @@ class FlickrSearch:
                 break
 
             last_end += len(links)
+            print("No. of Links retrieved for {} : {}".format(self.place, str(last_end)))
 
-            for _ in range(3):
+            for _ in range(5):
                 if self.check_and_click_if_load_more_exists() or self.scroll_to_bottom():
                     yield from asyncio.sleep(5)
 
@@ -58,6 +60,13 @@ class FlickrSearch:
     def check_and_click_if_load_more_exists(self):
         try:
             load_more_button = self.browser.find_element_by_css_selector(FLICKR_SEARCH["load_more_selector"])
+            self.scroll_to_bottom()
+            time.sleep(5)
+            """
+            self.browser.execute_script(
+                "var button = document.getElementsByClassName('{}');if (button[0]) {{button[0].click();}}".format(
+                    FLICKR_SEARCH["load_more_selector"]))
+            """
             load_more_button.click()
             return True
         except NoSuchElementException:

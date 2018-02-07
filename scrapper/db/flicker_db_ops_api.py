@@ -39,9 +39,11 @@ class FlickrGeoInsertHandler(tornado.web.RequestHandler):
 
         geo_model_queue = asyncio.Queue(loop=loop)
 
-        loop.create_task(model_tuple_consumer(queue=geo_model_queue, sqlite=self.sqlite))
-        loop.create_task(model_tuple_producer(queue=geo_model_queue, model=geo_model,
-                                              keys_to_keep=DB_API["geo_fields"]))
+        task1 = loop.create_task(model_tuple_consumer(queue=geo_model_queue, sqlite=self.sqlite))
+        task2 = loop.create_task(model_tuple_producer(queue=geo_model_queue, model=geo_model,
+                                                      keys_to_keep=DB_API["geo_fields"]))
+
+        asyncio.gather(task1, task2)
 
         yield geo_model_queue.join()
 
