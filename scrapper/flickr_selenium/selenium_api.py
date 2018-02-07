@@ -40,12 +40,11 @@ class FlickrSearch:
                 yield from queue.put(element.get_attribute("href"))
 
             if len(links) == 0:
-                yield from queue.put(None)
                 break
 
             last_end += len(links)
 
-            for _ in range(5):
+            for _ in range(3):
                 if self.check_and_click_if_load_more_exists() or self.scroll_to_bottom():
                     yield from asyncio.sleep(5)
 

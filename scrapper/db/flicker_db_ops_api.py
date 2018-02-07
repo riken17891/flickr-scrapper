@@ -36,11 +36,11 @@ class FlickrGeoInsertHandler(tornado.web.RequestHandler):
     def post(self):
         geo_model = tornado.escape.json_decode(self.request.body)
 
-        geo_model_queue = asyncio.Queue(loop=loop, maxsize=100)
+        geo_model_queue = asyncio.Queue(loop=loop)
 
-        asyncio.ensure_future(model_tuple_consumer(queue=geo_model_queue, sqlite=self.sqlite))
-        asyncio.ensure_future(model_tuple_producer(queue=geo_model_queue, model=geo_model,
-                                                   keys_to_keep=["id", "latitude", "longitude"]))
+        loop.create_task(model_tuple_consumer(queue=geo_model_queue, sqlite=self.sqlite))
+        loop.create_task(model_tuple_producer(queue=geo_model_queue, model=geo_model,
+                                              keys_to_keep=["id", "latitude", "longitude"]))
 
         yield geo_model_queue.join()
 
@@ -48,7 +48,7 @@ class FlickrGeoInsertHandler(tornado.web.RequestHandler):
 def flickr_search_app():
     return tornado.web.Application([
         (r"/", MainHandler),
-        (r"/flicker/geo/", FlickrGeoInsertHandler, dict(sqlite=SqlLite(FLICKR_DB["db_name"])))
+        (r"/flickr/geo/", FlickrGeoInsertHandler, dict(sqlite=SqlLite(FLICKR_DB["db_name"])))
     ])
 
 
