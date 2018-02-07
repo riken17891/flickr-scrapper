@@ -8,6 +8,7 @@ from tornado.platform.asyncio import AsyncIOMainLoop
 
 from db.db_api import SqlLite
 from config import FLICKR_DB
+from config import DB_API
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -80,6 +81,6 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
     app = flickr_search_app()
-    app.listen(8889)
-    print("Application started at port {}".format(8889))
+    app.listen(DB_API["port"])
+    print("Application started at port {}".format(DB_API["port"]))
     loop.run_forever()
