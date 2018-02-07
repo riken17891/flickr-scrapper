@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 
 import aiohttp
 import tornado.escape
@@ -13,6 +14,9 @@ from flickr_selenium.selenium_api import FlickrSearch
 
 from config import FLICKR_API
 from config import DB_API
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -33,9 +37,15 @@ class SearchHandler(tornado.web.RequestHandler):
         image_links_queue = asyncio.Queue(loop=loop)
         geo_model_queue = asyncio.Queue(loop=loop)
 
+        # get all image links and put it to image_links_queue
         task1 = loop.create_task(self.geo_model_consumer(city=city, geo_model_queue=geo_model_queue))
+        # get each image link from image_links_queue,
+        # open it,
+        # retrieve geo model from page source,
+        # put it to geo_model_queue
         task2 = loop.create_task(self.geo_model_producer(city=city, image_links_queue=image_links_queue,
                                                          geo_model_queue=geo_model_queue))
+        # send geo model as post data to centralized database operations api
         task3 = loop.create_task(self.image_link_producer(city=city, image_links_queue=image_links_queue))
 
         asyncio.gather(task1, task2, task3)
@@ -45,7 +55,7 @@ class SearchHandler(tornado.web.RequestHandler):
 
     @asyncio.coroutine
     def image_link_producer(self, city, image_links_queue):
-        print("Started Search for : ", city)
+        logging.info("Started Search for : {} ".format(city))
         flickr_search = FlickrSearch(city)
         yield from flickr_search.get_all_images(image_links_queue)
 
@@ -55,7 +65,7 @@ class SearchHandler(tornado.web.RequestHandler):
             while True:
                 link = yield from image_links_queue.get()
 
-                print("Reading : ", city, link)
+                logging.info("Reading : {} : {}".format(city, link))
 
                 yield from self.bound_read_one(url=link, session=session, result_queue=geo_model_queue)
 
@@ -68,7 +78,7 @@ class SearchHandler(tornado.web.RequestHandler):
             while True:
                 model = yield from geo_model_queue.get()
 
-                print("Posting : ", city, json.dumps(model))
+                logging.info("Posting : {} : {} ".format(city, json.dumps(model)))
 
                 if model is not None and model:
                     yield from self.post_one(url=url, session=session,
@@ -79,7 +89,7 @@ class SearchHandler(tornado.web.RequestHandler):
     @staticmethod
     async def post_one(url, session, data):
         async with session.post(url, data=data) as response:
-            print("Finished Posting :", data, str(response.status))
+            logging.info("Finished Posting : {} : {} ".format(data, str(response.status)))
 
     @staticmethod
     async def read_one(url, session, result_queue):
@@ -87,7 +97,7 @@ class SearchHandler(tornado.web.RequestHandler):
             async with session.get(url=url) as response:
                 if response.status == 200:
                     page_content = await response.read()
-                    print("Finished Reading : " + url)
+                    logging.error("Finished Reading : {} ".format(url))
                     await result_queue.put(FlickrImagePage(page_content).get_geo_model())
         except (aiohttp.ClientResponseError, aiohttp.ClientConnectionError,
                 aiohttp.ClientConnectorCertificateError,
@@ -96,7 +106,7 @@ class SearchHandler(tornado.web.RequestHandler):
                 aiohttp.ClientResponseError,
                 asyncio.TimeoutError,
                 TimeoutError) as e:
-            print("Error Reading : ", url, e)
+            logging.error("Error Reading : {} : {} ".format(url, e))
 
     async def bound_read_one(self, url, session, result_queue):
         async with semaphore:
@@ -116,5 +126,5 @@ if __name__ == "__main__":
 
     app = flickr_search_app()
     app.listen(FLICKR_API["port"])
-    print("Application started at port {}".format(FLICKR_API["port"]))
+    logging.info("Application started at port {}".format(FLICKR_API["port"]))
     loop.run_forever()

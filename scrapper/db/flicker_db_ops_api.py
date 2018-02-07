@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import tornado.escape
 import tornado.ioloop
@@ -9,6 +10,9 @@ from tornado.platform.asyncio import AsyncIOMainLoop
 from db.db_api import SqlLite
 from config import FLICKR_DB
 from config import DB_API
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -39,7 +43,9 @@ class FlickrGeoInsertHandler(tornado.web.RequestHandler):
 
         geo_model_queue = asyncio.Queue(loop=loop)
 
+        # generate tuples from json payload and add to geo_model_queue
         task1 = loop.create_task(model_tuple_consumer(queue=geo_model_queue, sqlite=self.sqlite))
+        # insert tuples to database
         task2 = loop.create_task(model_tuple_producer(queue=geo_model_queue, model=geo_model,
                                                       keys_to_keep=DB_API["geo_fields"]))
 
@@ -57,7 +63,7 @@ def flickr_search_app():
 
 @asyncio.coroutine
 def model_tuple_producer(queue, model, keys_to_keep):
-
+        # filter models to keep only keys provides using keys_to_keep
         for m in model:
             keys = m.keys()
 
@@ -72,7 +78,7 @@ def model_tuple_producer(queue, model, keys_to_keep):
 def model_tuple_consumer(queue, sqlite):
     while True:
         model_tuple = yield from queue.get()
-        print(model_tuple)
+        logging.info("Added : {}".format(model_tuple))
         sqlite.execute_insert(FLICKR_DB["geo_insert_into_table_sql"].format(FLICKR_DB["geo_table_name"]), [model_tuple])
 
         queue.task_done()
@@ -84,5 +90,5 @@ if __name__ == "__main__":
 
     app = flickr_search_app()
     app.listen(DB_API["port"])
-    print("Application started at port {}".format(DB_API["port"]))
+    logging.info("Application started at port {}".format(DB_API["port"]))
     loop.run_forever()

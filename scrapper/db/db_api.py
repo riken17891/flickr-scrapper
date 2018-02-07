@@ -1,5 +1,11 @@
 import sqlite3
+import logging
+
 from sqlite3 import Error
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class SqlLite:
@@ -8,7 +14,7 @@ class SqlLite:
         try:
             self.conn = sqlite3.connect(db_path)
         except Error as e:
-            print(e)
+            logging.error(e)
 
     def execute(self, statement):
         cursor = self.conn.cursor()
@@ -21,7 +27,7 @@ class SqlLite:
             cursor.executemany(statement, data)
             self.conn.commit()
         except Error as e:
-            print("Failed to insert : ", data, e)
+            logging.error("Failed to insert : {} : {} ".format(data, e))
 
     def execute_select(self, statement):
         self.conn.row_factory = self.dict_factory
@@ -31,7 +37,7 @@ class SqlLite:
             rows = cursor.execute(statement)
             return rows.fetchall()
         except Error as e:
-            print("Failed to select : ", e)
+            logging.error("Failed to select : {} ".format(e))
             return []
 
     @staticmethod
