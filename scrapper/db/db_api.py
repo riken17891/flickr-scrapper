@@ -1,10 +1,12 @@
 import sqlite3
 import logging
 
+from config import DB_API
+
 from sqlite3 import Error
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename=DB_API["log"])
 logger = logging.getLogger(__name__)
 
 

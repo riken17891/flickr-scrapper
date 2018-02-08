@@ -25,12 +25,14 @@ FLICKR_DB = {
 
 FLICKR_API = {
     "host": "localhost",
-    "port": "8888"
+    "port": "8888",
+    "log": "flickr_api.log"
 }
 
 DB_API = {
     "host": "localhost",
     "port": "8889",
+    "log": "flickr_db_api.log",
     "geo_path": "/flickr/geo/",
     "geo_fields": ["id", "latitude", "longitude"]
 }

@@ -15,7 +15,7 @@ from flickr_selenium.selenium_api import FlickrSearch
 from config import FLICKR_API
 from config import DB_API
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename=FLICKR_API["log"])
 logger = logging.getLogger(__name__)
 
 
@@ -97,7 +97,7 @@ class SearchHandler(tornado.web.RequestHandler):
             async with session.get(url=url) as response:
                 if response.status == 200:
                     page_content = await response.read()
-                    logging.error("Finished Reading : {} ".format(url))
+                    logging.info("Finished Reading : {} ".format(url))
                     await result_queue.put(FlickrImagePage(page_content).get_geo_model())
         except (aiohttp.ClientResponseError, aiohttp.ClientConnectionError,
                 aiohttp.ClientConnectorCertificateError,

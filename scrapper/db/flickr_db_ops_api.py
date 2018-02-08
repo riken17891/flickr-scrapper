@@ -11,7 +11,7 @@ from db.db_api import SqlLite
 from config import FLICKR_DB
 from config import DB_API
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename=DB_API["log"])
 logger = logging.getLogger(__name__)
 
 

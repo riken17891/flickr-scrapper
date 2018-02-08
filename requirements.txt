@@ -1,5 +1,6 @@
-aiohttp==2.3.10
+tornado==4.5.2
+html5lib==1.0b10
 selenium==3.8.1
 arsenic==1.0.0.dev7
-tornado==4.5.2
+aiohttp==2.3.10
 beautifulsoup4==4.6.0

@@ -2,6 +2,8 @@ import re
 import json
 import logging
 
+import html5lib
+
 import asyncio
 
 from selenium import webdriver
@@ -10,10 +12,12 @@ from selenium.common.exceptions import NoSuchElementException
 from bs4 import BeautifulSoup
 
 from config import FLICKR_SEARCH
+from config import FLICKR_API
 from config import SELENIUM
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename=FLICKR_API["log"])
 logger = logging.getLogger(__name__)
+
 
 class FlickrSearch:
 
@@ -21,7 +25,8 @@ class FlickrSearch:
 
         # add headless option to ChromeOptions
         options = webdriver.ChromeOptions()
-        options.add_argument('headless')
+        options.add_argument("headless")
+        options.add_argument("--no-sandbox")
 
         self.place = place
 
@@ -85,7 +90,7 @@ class FlickrSearch:
         try:
             # check if load_more button exists and if yes, then click
             load_more_button = self.browser.find_element_by_css_selector(FLICKR_SEARCH["load_more_selector"])
-            load_more_button.click()
+            self.browser.execute_script("arguments[0].click();", load_more_button)
             return True
         except NoSuchElementException:
             return False
