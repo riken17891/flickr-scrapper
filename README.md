@@ -26,7 +26,7 @@ Provides end point to start scrapping any place/city related images from flickr,
 
 RUN python flickr_api.py
   
-GET /start/search/{city/place} . e.g, /start/search/newyork
+POST /start/search/{city/place} . e.g, /start/search/newyork
 
 ## 3. db_api.py
 Provides methods to perform db related oprations using sqlite db, It utilizes python's OOTB sqlite3 module.

@@ -18,8 +18,9 @@ FLICKR_DB = {
     "db_name": "flickr.db",
     "geo_table_name": "flickr_geo",
     "geo_create_table_sql":
-        "CREATE TABLE IF NOT EXISTS {} (id bigint PRIMARY KEY, latitude decimal(9,6), longitude decimal(9,6))",
-    "geo_insert_into_table_sql": "INSERT INTO {} ('id', 'latitude', 'longitude') VALUES (?, ?, ?)",
+        """CREATE TABLE IF NOT EXISTS {} 
+        (city text, id bigint PRIMARY KEY, latitude decimal(9,6), longitude decimal(9,6), url text)""",
+    "geo_insert_into_table_sql": "INSERT INTO {} ('city', 'id', 'latitude', 'longitude', 'url') VALUES (?, ?, ?, ?, ?)",
     "geo_select_all_sql": "SELECT * FROM {}"
 }
 
@@ -34,5 +35,5 @@ DB_API = {
     "port": "8889",
     "log": "flickr_db_api.log",
     "geo_path": "/flickr/geo/",
-    "geo_fields": ["id", "latitude", "longitude"]
+    "geo_fields": ["city", "id", "latitude", "longitude", "url"]
 }

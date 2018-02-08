@@ -33,7 +33,23 @@ class SearchHandler(tornado.web.RequestHandler):
         pass
 
     @gen.coroutine
-    def get(self, city):
+    def post(self, city):
+        city = city.lower()
+
+        result = {}
+        if city in current_requests:
+            logging.info("Duplicate Search for : {} ".format(city))
+            result["result"] = "Duplicate Search for : {} ".format(city)
+            self.write(result)
+            self.flush()
+            return
+        else:
+            logging.info("Started Search for : {} ".format(city))
+            result["result"] = "Started Search for : {} ".format(city)
+            self.write(result)
+            self.flush()
+            current_requests.append(city)
+
         image_links_queue = asyncio.Queue(loop=loop)
         geo_model_queue = asyncio.Queue(loop=loop)
 
@@ -55,7 +71,6 @@ class SearchHandler(tornado.web.RequestHandler):
 
     @asyncio.coroutine
     def image_link_producer(self, city, image_links_queue):
-        logging.info("Started Search for : {} ".format(city))
         flickr_search = FlickrSearch(city)
         yield from flickr_search.get_all_images(image_links_queue)
 
@@ -67,7 +82,7 @@ class SearchHandler(tornado.web.RequestHandler):
 
                 logging.info("Reading : {} : {}".format(city, link))
 
-                yield from self.bound_read_one(url=link, session=session, result_queue=geo_model_queue)
+                yield from self.bound_read_one(city=city, url=link, session=session, result_queue=geo_model_queue)
 
                 image_links_queue.task_done()
 
@@ -82,7 +97,7 @@ class SearchHandler(tornado.web.RequestHandler):
 
                 if model is not None and model:
                     yield from self.post_one(url=url, session=session,
-                                             data=json.dumps([model[0]], sort_keys=True))
+                                             data=json.dumps([model], sort_keys=True))
 
                 geo_model_queue.task_done()
 
@@ -92,13 +107,13 @@ class SearchHandler(tornado.web.RequestHandler):
             logging.info("Finished Posting : {} : {} ".format(data, str(response.status)))
 
     @staticmethod
-    async def read_one(url, session, result_queue):
+    async def read_one(city, url, session, result_queue):
         try:
             async with session.get(url=url) as response:
                 if response.status == 200:
                     page_content = await response.read()
                     logging.info("Finished Reading : {} ".format(url))
-                    await result_queue.put(FlickrImagePage(page_content).get_geo_model())
+                    await result_queue.put(FlickrImagePage(page_content).get_geo_model(city=city, url=url))
         except (aiohttp.ClientResponseError, aiohttp.ClientConnectionError,
                 aiohttp.ClientConnectorCertificateError,
                 aiohttp.ServerDisconnectedError,
@@ -108,9 +123,9 @@ class SearchHandler(tornado.web.RequestHandler):
                 TimeoutError) as e:
             logging.error("Error Reading : {} : {} ".format(url, e))
 
-    async def bound_read_one(self, url, session, result_queue):
+    async def bound_read_one(self, city, url, session, result_queue):
         async with semaphore:
-            await self.read_one(url, session, result_queue)
+            await self.read_one(city, url, session, result_queue)
 
 
 def flickr_search_app():
@@ -123,6 +138,8 @@ if __name__ == "__main__":
     AsyncIOMainLoop().install()
     loop = asyncio.get_event_loop()
     semaphore = asyncio.Semaphore(100)
+
+    current_requests = []
 
     app = flickr_search_app()
     app.listen(FLICKR_API["port"])

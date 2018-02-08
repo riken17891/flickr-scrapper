@@ -131,7 +131,7 @@ class FlickrImagePage:
         # return pulled json as dict
         return json.loads(json_string)
 
-    def get_geo_model(self):
+    def get_geo_model(self, city, url):
         if not self.model:
             return []
 
@@ -139,7 +139,11 @@ class FlickrImagePage:
         geo_model = self.model[FLICKR_SEARCH["model_key"]][FLICKR_SEARCH["geo_model_key"]]
 
         if geo_model is None:
-            return []
+            return {}
+
+        geo_model_one = geo_model[0]
+        geo_model_one["city"] = city
+        geo_model_one["url"] = url
 
         # return pulled geo model as dict
-        return geo_model
+        return geo_model_one
