@@ -69,6 +69,9 @@ class SearchHandler(tornado.web.RequestHandler):
         yield image_links_queue.join()
         yield geo_model_queue.join()
 
+        # remove from current requests
+        current_requests.remove(city)
+
     @asyncio.coroutine
     def image_link_producer(self, city, image_links_queue):
         flickr_search = FlickrSearch(city)
