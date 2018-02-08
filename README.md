@@ -3,13 +3,12 @@
 
 ## Prerequisites
 
-1. python 3.6
+1. python==3.6
 2. aiohttp==2.3.10
 3. selenium==3.8.1
 4. tornado==4.5.2
 5. beautifulsoup4==4.6.0
-6. chromedriver==2.32 (2.35 doesn't work well for Headless Purposes - If want to use 2.35 then just comment out the headless option in selenium_api.py)
-
+6. chromedriver==2.35
 
 ## 1. selenium_api.py
 
@@ -44,4 +43,11 @@ POST /flickr/geo (Accepts json array of geo models)
 
 
 GET /flickr/geo (Returns all geo models from Database)
-    
+
+
+## Docker
+
+Project can be pulled and run from docker hub using following commands,
+
+1. docker pull riken17891/python_selenium:flickr_scrapper
+2. docker run -p 8888:8888 -p 8889:8889 riken17891/python_selenium:flickr_scrapper    
